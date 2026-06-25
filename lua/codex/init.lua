@@ -17,6 +17,7 @@ local config = {
   autoinstall = true,
   panel     = false,   -- if true, open Codex in a side-panel instead of floating window
   use_buffer = false,  -- if true, capture Codex stdout into a normal buffer instead of a terminal
+  panel_cmd = 'vertical rightbelow vsplit', -- Command to use to create the panel or empty string to use the current window.
 }
 
 function M.setup(user_config)
@@ -88,15 +89,19 @@ local function open_window()
   })
 end
 
---- Open Codex in a side-panel (vertical split) instead of floating window
+--- Open Codex in a panel instead of floating window
 local function open_panel()
-  -- Create a vertical split on the right and show the buffer
-  vim.cmd('vertical rightbelow vsplit')
+  -- Create a window if needed and show the buffer
+  if config.panel_cmd ~= '' then
+    vim.cmd(config.panel_cmd)
+  end
   local win = vim.api.nvim_get_current_win()
   vim.api.nvim_win_set_buf(win, state.buf)
   -- Adjust width according to config (percentage of total columns)
-  local width = math.floor(vim.o.columns * config.width)
-  vim.api.nvim_win_set_width(win, width)
+  if config.width > 0 then
+    local width = math.floor(vim.o.columns * config.width)
+    vim.api.nvim_win_set_width(win, width)
+  end
   state.win = win
 end
 
