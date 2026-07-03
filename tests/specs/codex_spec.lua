@@ -8,6 +8,8 @@ describe('codex.nvim', function()
   before_each(function()
     vim.cmd 'set noswapfile' -- prevent side effects
     vim.cmd 'silent! bwipeout!' -- close any open codex windows
+    package.loaded['codex'] = nil
+    package.loaded['codex.state'] = nil
   end)
 
   it('loads the module', function()
@@ -53,6 +55,44 @@ describe('codex.nvim', function()
     require('codex').toggle()
 
     local ok, _ = pcall(vim.api.nvim_win_get_buf, win1)
+    assert(not ok, 'Codex window should be closed')
+  end)
+
+  it('opens when the tracked window no longer shows the Codex buffer', function()
+    local codex = require 'codex'
+    local state = require 'codex.state'
+    codex.setup { cmd = { 'echo', 'test' } }
+
+    codex.open()
+    local original_win = vim.api.nvim_get_current_win()
+    local codex_buf = vim.api.nvim_win_get_buf(original_win)
+    local other_buf = vim.api.nvim_create_buf(false, true)
+
+    vim.api.nvim_win_set_buf(original_win, other_buf)
+    codex.toggle()
+
+    local current_win = vim.api.nvim_get_current_win()
+    eq(codex_buf, vim.api.nvim_win_get_buf(current_win))
+    eq(current_win, state.win)
+
+    codex.close()
+  end)
+
+  it('closes when the current window manually shows the Codex buffer', function()
+    local codex = require 'codex'
+    local state = require 'codex.state'
+    codex.setup { cmd = { 'echo', 'test' } }
+
+    codex.open()
+    local codex_win = vim.api.nvim_get_current_win()
+    local codex_buf = vim.api.nvim_win_get_buf(codex_win)
+
+    state.win = nil
+    vim.api.nvim_set_current_win(codex_win)
+    vim.api.nvim_win_set_buf(codex_win, codex_buf)
+    codex.toggle()
+
+    local ok, _ = pcall(vim.api.nvim_win_get_buf, codex_win)
     assert(not ok, 'Codex window should be closed')
   end)
 

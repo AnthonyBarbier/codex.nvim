@@ -105,6 +105,38 @@ local function open_panel()
   state.win = win
 end
 
+local function is_valid_buf(buf)
+  return type(buf) == 'number' and vim.api.nvim_buf_is_valid(buf)
+end
+
+local function win_get_buf(win)
+  if type(win) ~= 'number' or not vim.api.nvim_win_is_valid(win) then
+    return nil
+  end
+
+  local ok, buf = pcall(vim.api.nvim_win_get_buf, win)
+  if ok then
+    return buf
+  end
+end
+
+local function refresh_window_state()
+  if not is_valid_buf(state.buf) then
+    state.win = nil
+    return
+  end
+
+  local current_win = vim.api.nvim_get_current_win()
+  if win_get_buf(current_win) == state.buf then
+    state.win = current_win
+    return
+  end
+
+  if win_get_buf(state.win) ~= state.buf then
+    state.win = nil
+  end
+end
+
 function M.open()
   local function create_clean_buf()
     local buf = vim.api.nvim_create_buf(false, false)
@@ -169,11 +201,7 @@ function M.open()
     end
   end
 
-  local function is_buf_reusable(buf)
-    return type(buf) == 'number' and vim.api.nvim_buf_is_valid(buf)
-  end
-
-  if not is_buf_reusable(state.buf) then
+  if not is_valid_buf(state.buf) then
     state.buf = create_clean_buf()
   end
 
@@ -235,6 +263,8 @@ function M.close()
 end
 
 function M.toggle()
+  refresh_window_state()
+
   if state.win and vim.api.nvim_win_is_valid(state.win) then
     M.close()
   else
